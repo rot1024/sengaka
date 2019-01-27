@@ -1,0 +1,9 @@
+[package]
+name = "sengaka"
+version = "0.1.0"
+authors = ["rot1024 <aayhrot@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32.0"
+image = "0.21.0"
