@@ -60,7 +60,7 @@ fn main2() -> Result<(), Error> {
         )
         .arg(
             Arg::with_name("sigma")
-                .short("d")
+                .short("s")
                 .long("sigma")
                 .takes_value(true)
                 .help("Blur sigma")
@@ -68,7 +68,7 @@ fn main2() -> Result<(), Error> {
         )
         .arg(
             Arg::with_name("shadow")
-                .short("s")
+                .short("S")
                 .long("shadow")
                 .takes_value(true)
                 .help("Shadow input level (0 ~ 255)")
