@@ -18,7 +18,8 @@ fn main() {
 }
 
 fn main2() -> Result<(), Error> {
-    let defalut_value_str = sengaka::DELTA_DEFAULT.to_string();
+    let def_sigma_str = sengaka::SIGMA_DEFAULT.to_string();
+    let def_shadow_str = sengaka::SHADOW_DEFAULT.to_string();
 
     let matches = App::new(crate_name!())
         .version(crate_version!())
@@ -61,7 +62,17 @@ fn main2() -> Result<(), Error> {
             Arg::with_name("sigma")
                 .short("d")
                 .long("sigma")
-                .default_value(&defalut_value_str),
+                .takes_value(true)
+                .help("Blur sigma")
+                .default_value(&def_sigma_str),
+        )
+        .arg(
+            Arg::with_name("shadow")
+                .short("s")
+                .long("shadow")
+                .takes_value(true)
+                .help("Shadow input level (0 ~ 255)")
+                .default_value(&def_shadow_str),
         )
         .get_matches();
 
@@ -99,7 +110,19 @@ fn main2() -> Result<(), Error> {
             .to_ascii_lowercase(),
     };
 
-    sengaka::sengaka(input, &mut output, &iformat, &oformat)?;
+    let sigma = matches
+        .value_of("sigma")
+        .unwrap()
+        .parse()
+        .map_err(|_| Error::InvalidSigma)?;
+
+    let shadow = matches
+        .value_of("shadow")
+        .unwrap()
+        .parse()
+        .map_err(|_| Error::InvalidShadow)?;
+
+    sengaka::sengaka(input, &mut output, &iformat, &oformat, sigma, shadow)?;
 
     output.flush()?;
     Ok(())
@@ -147,6 +170,8 @@ impl<'a> Seek for Input<'a> {
 #[derive(Debug)]
 enum Error {
     UnknownFormat,
+    InvalidSigma,
+    InvalidShadow,
     IO(IOError),
     Sengaka(sengaka::Error),
     Misc(Box<StdError>),
@@ -159,6 +184,8 @@ impl fmt::Display for Error {
             Error::Misc(e) => write!(f, "{}", e),
             Error::Sengaka(e) => write!(f, "{}", e),
             Error::UnknownFormat => write!(f, "unknown format"),
+            Error::InvalidSigma => write!(f, "invalid sigma"),
+            Error::InvalidShadow => write!(f, "invalid shadow"),
         }
     }
 }
