@@ -43,3 +43,18 @@ sengaka -i foo.png -O jpg > bar.jpg
 sengaka -I png -o bar.jpg < foo.png
 sengaka -I png -O jpg < foo.png > bar.jpg
 ```
+
+## Supported image format
+
+**Alpha image is not supported!**
+
+- JPEG (`jpg` or `jpeg`)
+- PNG(`png`)
+- GIF(`gif`)
+- WebP(`webp`)
+- TIFF(`tif` or `tiff`)
+- TGA (`tga`)
+- BMP(`bmp`)
+- ICO(`ico`)
+- HDR(`hdr`)
+- PNM(`pbm`, `pam`, `ppm`, or `pgm`)
