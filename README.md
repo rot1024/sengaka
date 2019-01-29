@@ -27,7 +27,7 @@ OPTIONS:
 
 ## Install
 
-**Windows**: Download from [releases](https://github.com/rot1024/sengaka/releases).
+**Windows**: ~~Download from [releases](https://github.com/rot1024/sengaka/releases).~~ Not ready yet
 
 **MacOS or Linux**:
 
@@ -46,15 +46,15 @@ sengaka -I png -O jpg < foo.png > bar.jpg
 
 ## Supported image format
 
-**Alpha image is not supported!**
+Alpha image is not supported.
 
 - JPEG (`jpg` or `jpeg`)
-- PNG(`png`)
-- GIF(`gif`)
-- WebP(`webp`)
-- TIFF(`tif` or `tiff`)
+- PNG (`png`)
+- GIF (`gif`)
+- WebP (`webp`)
+- TIFF (`tif` or `tiff`)
 - TGA (`tga`)
-- BMP(`bmp`)
-- ICO(`ico`)
-- HDR(`hdr`)
-- PNM(`pbm`, `pam`, `ppm`, or `pgm`)
+- BMP (`bmp`)
+- ICO (`ico`)
+- HDR (`hdr`)
+- PNM (`pbm`, `pam`, `ppm`, or `pgm`)
