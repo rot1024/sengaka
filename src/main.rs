@@ -2,13 +2,11 @@ use clap::{crate_name, crate_version, App, Arg};
 use sengaka;
 use std::error::Error as StdError;
 use std::fmt;
-use std::fs::File;
-use std::io::{
-    stdin, stdout, BufRead, BufReader, BufWriter, Cursor, Error as IOError, Read, Seek, SeekFrom,
-    Write,
-};
-use std::path::Path;
+use std::io::{Error as IOError, Write};
+use std::path::PathBuf;
 use std::process::exit;
+
+mod io;
 
 fn main() {
     if let Err(err) = main2() {
@@ -30,7 +28,7 @@ fn main2() -> Result<(), Error> {
                 .long("input")
                 .value_name("FILE")
                 .takes_value(true)
-                .help("Input file path. If omit, standard input is used."),
+                .help("Input file or directory path. If omit, stdin is used."),
         )
         .arg(
             Arg::with_name("output")
@@ -38,7 +36,7 @@ fn main2() -> Result<(), Error> {
                 .long("output")
                 .value_name("FILE")
                 .takes_value(true)
-                .help("Output file path. If omit, standard output is used."),
+                .help("Output file or directory path. If omit, stdout is used."),
         )
         .arg(
             Arg::with_name("input format")
@@ -47,7 +45,7 @@ fn main2() -> Result<(), Error> {
                 .value_name("FORMAT")
                 .takes_value(true)
                 .required_unless("input")
-                .help("Input image format. e.g. png, jpg, ..."),
+                .help("Input image format. Required if input is stdin. e.g. png, jpg, ..."),
         )
         .arg(
             Arg::with_name("output format")
@@ -56,7 +54,7 @@ fn main2() -> Result<(), Error> {
                 .value_name("FORMAT")
                 .takes_value(true)
                 .required_unless("output")
-                .help("Output image format. e.g. png, jpg, ..."),
+                .help("Output image format. Required if output is stdout. e.g. png, jpg, ..."),
         )
         .arg(
             Arg::with_name("sigma")
@@ -74,41 +72,25 @@ fn main2() -> Result<(), Error> {
                 .help("Shadow input level (0 ~ 255)")
                 .default_value(&def_shadow_str),
         )
+        .arg(
+            Arg::with_name("quite")
+                .short("q")
+                .long("quite")
+                .help("Disables printing logs"),
+        )
         .get_matches();
 
-    let mut buff = Vec::new();
-    let sout = stdout();
-
     let input = match matches.value_of("input") {
-        None => {
-            stdin().lock().read_to_end(&mut buff)?;
-            Input::Binary(Cursor::new(&buff))
-        }
-        Some(i) => Input::File(BufReader::new(File::open(i)?)),
+        None => io::Input::Stdin,
+        Some(i) => io::Input::FileOrDir(PathBuf::from(i)),
     };
-
-    let mut output: Box<Write> = match matches.value_of("output") {
-        None => Box::new(sout.lock()),
-        Some(o) => Box::new(BufWriter::new(File::create(o)?)),
+    let output = match matches.value_of("output") {
+        None => io::Output::Stdout,
+        Some(o) => io::Output::FileOrDir(PathBuf::from(o)),
     };
-
-    let iformat = match matches.value_of("input format") {
-        Some(f) => f.to_string(),
-        None => Path::new(matches.value_of("input").unwrap())
-            .extension()
-            .ok_or(Error::UnknownFormat)?
-            .to_string_lossy()
-            .to_ascii_lowercase(),
-    };
-
-    let oformat = match matches.value_of("output format") {
-        Some(f) => f.to_string(),
-        None => Path::new(matches.value_of("output").unwrap())
-            .extension()
-            .ok_or(Error::UnknownFormat)?
-            .to_string_lossy()
-            .to_ascii_lowercase(),
-    };
+    let iformat = matches.value_of("input format").map(|s| s.to_string());
+    let oformat = matches.value_of("output format").map(|s| s.to_string());
+    let quite = matches.is_present("quite");
 
     let sigma = matches
         .value_of("sigma")
@@ -122,49 +104,30 @@ fn main2() -> Result<(), Error> {
         .parse()
         .map_err(|_| Error::InvalidShadow)?;
 
-    sengaka::sengaka(input, &mut output, &iformat, &oformat, sigma, shadow)?;
+    let inputoutput = io::IO::new(input, output, iformat, oformat)?;
 
-    output.flush()?;
+    for f in inputoutput.iter() {
+        let mut item = f?;
+
+        if !quite {
+            if let Some(f) = item.file_name {
+                eprintln!("{}", f);
+            }
+        }
+
+        sengaka::sengaka(
+            item.input,
+            &mut item.output,
+            item.input_format,
+            item.output_format,
+            sigma,
+            shadow,
+        )?;
+
+        item.output.flush()?;
+    }
+
     Ok(())
-}
-
-enum Input<'a> {
-    Binary(Cursor<&'a [u8]>),
-    File(BufReader<std::fs::File>),
-}
-
-impl<'a> Read for Input<'a> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        match self {
-            Input::Binary(v) => v.read(buf),
-            Input::File(f) => f.read(buf),
-        }
-    }
-}
-
-impl<'a> BufRead for Input<'a> {
-    fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
-        match self {
-            Input::Binary(v) => v.fill_buf(),
-            Input::File(f) => f.fill_buf(),
-        }
-    }
-
-    fn consume(&mut self, amt: usize) {
-        match self {
-            Input::Binary(v) => v.consume(amt),
-            Input::File(f) => f.consume(amt),
-        }
-    }
-}
-
-impl<'a> Seek for Input<'a> {
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        match self {
-            Input::Binary(v) => v.seek(pos),
-            Input::File(f) => f.seek(pos),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -172,6 +135,8 @@ enum Error {
     UnknownFormat,
     InvalidSigma,
     InvalidShadow,
+    UnknownFileName,
+    MultiToSingle,
     IO(IOError),
     Sengaka(sengaka::Error),
     Misc(Box<StdError>),
@@ -186,6 +151,11 @@ impl fmt::Display for Error {
             Error::UnknownFormat => write!(f, "unknown format"),
             Error::InvalidSigma => write!(f, "invalid sigma"),
             Error::InvalidShadow => write!(f, "invalid shadow"),
+            Error::UnknownFileName => write!(
+                f,
+                "stdin has no file name. specify file name in -o option or use stdout"
+            ),
+            Error::MultiToSingle => write!(f, "input is multiple but output is single"),
         }
     }
 }
@@ -205,5 +175,27 @@ impl From<sengaka::Error> for Error {
 impl From<Box<StdError>> for Error {
     fn from(e: Box<StdError>) -> Error {
         Error::Misc(e)
+    }
+}
+
+impl From<io::IOIteratorError> for Error {
+    fn from(e: io::IOIteratorError) -> Self {
+        match e {
+            io::IOIteratorError::IO(err) => Error::from(err),
+            io::IOIteratorError::UnknownInputFormat | io::IOIteratorError::UnknownOutputFormat => {
+                Error::UnknownFormat
+            }
+            io::IOIteratorError::UnknownFileName => Error::UnknownFileName,
+            io::IOIteratorError::MultiToSingle => Error::MultiToSingle,
+        }
+    }
+}
+
+impl From<io::IOItemError> for Error {
+    fn from(e: io::IOItemError) -> Self {
+        match e {
+            io::IOItemError::InputIO(err) => Error::IO(err),
+            io::IOItemError::OutputIO(err) => Error::IO(err),
+        }
     }
 }
