@@ -32,7 +32,7 @@ OPTIONS:
 **MacOS or Linux**:
 
 ```sh
-curl -L https://github.com/rot1024/sengaka/releases/download/v0.1.0/sengaka_0.1.0_`uname -s`_`uname -m` > /usr/local/bin/sengaka && chmod +x /usr/local/bin/sengaka
+curl -L https://github.com/rot1024/sengaka/releases/download/v0.2.0/sengaka_0.2.0_`uname -s`_`uname -m` > /usr/local/bin/sengaka && chmod +x /usr/local/bin/sengaka
 ```
 
 ## Usage
