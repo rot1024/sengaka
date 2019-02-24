@@ -2,25 +2,25 @@
 
 線画化 - CLI tool to make images a line drawing, being suitable to anime captures or illustrations
 
-
 ![Example](example.png)
 
 ```
-sengaka 0.1.0
+sengaka 0.2.0
 CLI tool to make images a line drawing
 
 USAGE:
-    sengaka [OPTIONS] --if <FORMAT> --of <FORMAT>
+    sengaka [FLAGS] [OPTIONS] --if <FORMAT> --of <FORMAT>
 
 FLAGS:
     -h, --help       Prints help information
+    -q, --quite      Disables printing logs
     -V, --version    Prints version information
 
 OPTIONS:
-    -i, --input <FILE>       Input file path. If omit, standard input is used.
-    -I, --if <FORMAT>        Input image format. e.g. png, jpg, ...
-    -o, --output <FILE>      Output file path. If omit, standard output is used.
-    -O, --of <FORMAT>        Output image format. e.g. png, jpg, ...
+    -i, --input <FILE>       Input file or directory path. If omit, stdin is used.
+    -I, --if <FORMAT>        Input image format. Required if input is stdin. e.g. png, jpg, ...
+    -o, --output <FILE>      Output file or directory path. If omit, stdout is used.
+    -O, --of <FORMAT>        Output image format. Required if output is stdout. e.g. png, jpg, ...
     -S, --shadow <shadow>    Shadow input level (0 ~ 255) [default: 150]
     -s, --sigma <sigma>      Blur sigma [default: 1.8]
 ```
